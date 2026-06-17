@@ -251,6 +251,8 @@ body {
   font-size: 13px;
   margin-bottom: 16px;
   animation: slideIn 0.3s ease;
+  white-space: pre-line;
+  line-height: 1.6;
 }
 
 @keyframes slideIn {

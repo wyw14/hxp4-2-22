@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { GameState, HexCell, HexCoord, HexType } from './types';
+import { GameState, HexCell, HexCoord, HexType, ExtendFailureReason, ExtendResult } from './types';
 import { coordKey, generateHexGrid, hexDistance, getNeighbors, isInRadius, findPathAStar } from './hexUtils';
 
 const LEVEL_CONFIGS: Record<number, { radius: number; nutrients: number; polluted: number }> = {
@@ -140,36 +140,36 @@ function calculateOptimalSteps(
   return result === Infinity || result === 0 ? nutrientCoords.length * 3 : result;
 }
 
-export function extendMycelium(game: GameState, coord: HexCoord): { game: GameState; success: boolean; message: string } {
+export function extendMycelium(game: GameState, coord: HexCoord): ExtendResult {
   if (game.status !== 'playing') {
-    return { game, success: false, message: '游戏已结束' };
+    return { game, success: false, message: '游戏已结束', failureReason: ExtendFailureReason.GAME_ENDED };
   }
 
   const key = coordKey(coord);
   const cell = game.cells[key];
 
   if (!cell) {
-    return { game, success: false, message: '坐标无效' };
+    return { game, success: false, message: '坐标无效', failureReason: ExtendFailureReason.INVALID_COORD };
   }
 
   if (!isInRadius(coord, game.gridRadius)) {
-    return { game, success: false, message: '超出地图范围' };
+    return { game, success: false, message: '超出地图范围', failureReason: ExtendFailureReason.OUT_OF_BOUNDS };
   }
 
   if (cell.type === HexType.POLLUTED) {
-    return { game, success: false, message: '不能蔓延到重金属污染区！' };
+    return { game, success: false, message: '不能蔓延到重金属污染区！', failureReason: ExtendFailureReason.POLLUTED };
   }
 
   const myceliumKeys = new Set(game.myceliumCells.map(coordKey));
   if (myceliumKeys.has(key)) {
-    return { game, success: false, message: '该位置已被菌丝覆盖' };
+    return { game, success: false, message: '该位置已被菌丝覆盖', failureReason: ExtendFailureReason.ALREADY_COVERED };
   }
 
   const neighbors = getNeighbors(coord);
   const hasAdjacentMycelium = neighbors.some((n) => myceliumKeys.has(coordKey(n)));
 
   if (!hasAdjacentMycelium) {
-    return { game, success: false, message: '菌丝只能从相邻格子蔓延！' };
+    return { game, success: false, message: '菌丝只能从相邻格子蔓延！', failureReason: ExtendFailureReason.NOT_ADJACENT };
   }
 
   const newGame: GameState = {

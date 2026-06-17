@@ -42,8 +42,25 @@ export interface ExtendMyceliumRequest {
   coord: HexCoord;
 }
 
+export enum ExtendFailureReason {
+  OUT_OF_BOUNDS = 'out_of_bounds',
+  POLLUTED = 'polluted',
+  ALREADY_COVERED = 'already_covered',
+  NOT_ADJACENT = 'not_adjacent',
+  GAME_ENDED = 'game_ended',
+  INVALID_COORD = 'invalid_coord',
+}
+
+export interface ExtendResult {
+  game: GameState;
+  success: boolean;
+  message: string;
+  failureReason?: ExtendFailureReason;
+}
+
 export interface ApiResponse<T = void> {
   success: boolean;
   data?: T;
   error?: string;
+  failureReason?: ExtendFailureReason;
 }

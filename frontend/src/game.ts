@@ -1,5 +1,5 @@
 import './styles.css';
-import { GameState, HexCoord, HexType } from './types';
+import { GameState, HexCoord, HexType, ExtendFailureReason, ExtendError } from './types';
 import { HexGridRenderer } from './hexGrid';
 import { createGame, getGame, extendMycelium, undoMove, resetGame, findPath } from './api';
 import { coordKey, findPathAStar, PixelCoord } from './hexUtils';
@@ -300,17 +300,31 @@ export class FungiGame {
     }
   }
 
+  private getFailureDiagnosis(reason: ExtendFailureReason, coord: HexCoord): string {
+    switch (reason) {
+      case ExtendFailureReason.OUT_OF_BOUNDS:
+        return `🚫 蔓延失败：坐标 (q:${coord.q}, r:${coord.r}) 超出地图范围\n当前地图半径为 ${this.gameState?.gridRadius ?? '?'}，请选择地图内的格子。`;
+      case ExtendFailureReason.POLLUTED:
+        return `☢️ 蔓延失败：该位置是重金属污染区\n污染区有毒，菌丝无法在此生长，请绕行选择其他格子。`;
+      case ExtendFailureReason.ALREADY_COVERED:
+        return `🍄 蔓延失败：该位置已被菌丝覆盖\n坐标 (q:${coord.q}, r:${coord.r}) 已经是菌丝区域，无需重复蔓延。`;
+      case ExtendFailureReason.NOT_ADJACENT:
+        return `📏 蔓延失败：距离不相邻\n菌丝只能从已有的菌丝区域向**相邻的 6 个方向**蔓延，请选择与菌丝接壤的格子。`;
+      case ExtendFailureReason.GAME_ENDED:
+        return `⏹️ 蔓延失败：游戏已结束\n当前游戏已通关，无法继续操作。请开始新游戏或重置关卡。`;
+      case ExtendFailureReason.INVALID_COORD:
+        return `❌ 蔓延失败：坐标无效\n坐标 (q:${coord.q}, r:${coord.r}) 不合法，请选择有效的六边形格子。`;
+      default:
+        return '❌ 蔓延失败：未知原因';
+    }
+  }
+
   private async handleCellClick(coord: HexCoord): Promise<void> {
     if (this.isProcessing || !this.gameState || this.gameState.status !== 'playing') return;
 
     const key = coordKey(coord);
     const cell = this.gameState.cells[key];
     if (!cell) return;
-
-    if (cell.type === HexType.POLLUTED) {
-      this.showMessage('⚠️ 不能蔓延到重金属污染区！', 'error');
-      return;
-    }
 
     this.setProcessing(true);
 
@@ -328,7 +342,11 @@ export class FungiGame {
 
       this.renderPanel();
     } catch (e) {
-      this.showMessage(e instanceof Error ? e.message : '操作失败', 'error');
+      if (e instanceof ExtendError && e.failureReason) {
+        this.showMessage(this.getFailureDiagnosis(e.failureReason, coord), 'error');
+      } else {
+        this.showMessage(e instanceof Error ? e.message : '操作失败', 'error');
+      }
     } finally {
       this.setProcessing(false);
     }

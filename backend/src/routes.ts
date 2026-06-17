@@ -89,6 +89,7 @@ router.post('/games/:id/extend', (req, res) => {
       success: result.success,
       data: result.game,
       error: result.success ? undefined : result.message,
+      failureReason: result.success ? undefined : result.failureReason,
     };
     res.json(response);
   } catch (error) {
