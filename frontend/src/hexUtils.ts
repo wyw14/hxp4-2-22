@@ -146,3 +146,28 @@ export function hexCornersPath(center: PixelCoord, size: number): string {
   const corners = hexCorners(center, size);
   return corners.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x} ${c.y}`).join(' ') + ' Z';
 }
+
+export function pixelToHex(pixel: PixelCoord, size: number): HexCoord {
+  const q = ((2 / 3) * pixel.x) / size;
+  const r = ((-1 / 3) * pixel.x + (Math.sqrt(3) / 3) * pixel.y) / size;
+  return hexRound({ q, r });
+}
+
+function hexRound(coord: { q: number; r: number }): HexCoord {
+  const s = -coord.q - coord.r;
+  let rq = Math.round(coord.q);
+  let rr = Math.round(coord.r);
+  let rs = Math.round(s);
+
+  const qDiff = Math.abs(rq - coord.q);
+  const rDiff = Math.abs(rr - coord.r);
+  const sDiff = Math.abs(rs - s);
+
+  if (qDiff > rDiff && qDiff > sDiff) {
+    rq = -rr - rs;
+  } else if (rDiff > sDiff) {
+    rr = -rq - rs;
+  }
+
+  return { q: rq, r: rr };
+}

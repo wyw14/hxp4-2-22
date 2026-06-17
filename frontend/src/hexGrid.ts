@@ -6,6 +6,7 @@ import {
   hexCornersPath,
   getNeighbors,
   PixelCoord,
+  pixelToHex,
 } from './hexUtils';
 
 interface HexGridOptions {
@@ -99,6 +100,20 @@ export class HexGridRenderer {
     this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     this.svg.style.maxWidth = '100%';
     this.svg.style.height = 'auto';
+
+    this.svg.onclick = (e: MouseEvent) => {
+      if (!this.onCellClick) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.hex-cell')) return;
+
+      const rect = this.svg.getBoundingClientRect();
+      const scaleX = parseFloat(this.svg.getAttribute('width') || '1') / rect.width;
+      const scaleY = parseFloat(this.svg.getAttribute('height') || '1') / rect.height;
+      const svgX = (e.clientX - rect.left) * scaleX - this.offsetX;
+      const svgY = (e.clientY - rect.top) * scaleY - this.offsetY;
+      const coord = pixelToHex({ x: svgX, y: svgY }, this.size);
+      this.onCellClick(coord);
+    };
 
     while (this.svg.firstChild) {
       this.svg.removeChild(this.svg.firstChild);

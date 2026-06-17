@@ -301,19 +301,20 @@ export class FungiGame {
   }
 
   private getFailureDiagnosis(reason: ExtendFailureReason, coord: HexCoord): string {
+    const radius = this.gameState?.gridRadius ?? '?';
     switch (reason) {
       case ExtendFailureReason.OUT_OF_BOUNDS:
-        return `🚫 蔓延失败：坐标 (q:${coord.q}, r:${coord.r}) 超出地图范围\n当前地图半径为 ${this.gameState?.gridRadius ?? '?'}，请选择地图内的格子。`;
+        return `🚫 超出地图范围\n\n坐标 (q: ${coord.q}, r: ${coord.r}) 在地图边界之外。\n当前地图半径为 ${radius}，六边形坐标需满足：|q| ≤ ${radius} 且 |r| ≤ ${radius} 且 |s| ≤ ${radius}（s = -q - r）。\n请点击地图范围内的格子。`;
       case ExtendFailureReason.POLLUTED:
-        return `☢️ 蔓延失败：该位置是重金属污染区\n污染区有毒，菌丝无法在此生长，请绕行选择其他格子。`;
+        return `☢️ 重金属污染区\n\n坐标 (q: ${coord.q}, r: ${coord.r}) 是污染区。\n污染区含有重金属毒素，菌丝无法在此生存。\n请选择空白区域或营养源，绕开污染区蔓延。`;
       case ExtendFailureReason.ALREADY_COVERED:
-        return `🍄 蔓延失败：该位置已被菌丝覆盖\n坐标 (q:${coord.q}, r:${coord.r}) 已经是菌丝区域，无需重复蔓延。`;
+        return `🍄 已被菌丝覆盖\n\n坐标 (q: ${coord.q}, r: ${coord.r}) 已经是菌丝区域。\n该位置已被成功蔓延，无需重复点击。\n请选择相邻的未覆盖格子继续扩展。`;
       case ExtendFailureReason.NOT_ADJACENT:
-        return `📏 蔓延失败：距离不相邻\n菌丝只能从已有的菌丝区域向**相邻的 6 个方向**蔓延，请选择与菌丝接壤的格子。`;
+        return `📏 距离不相邻\n\n坐标 (q: ${coord.q}, r: ${coord.r}) 与现有菌丝区域不相邻。\n菌丝只能向 6 个相邻方向蔓延（上、下、左上、左下、右上、右下）。\n请选择与菌丝区域直接接壤的格子。`;
       case ExtendFailureReason.GAME_ENDED:
-        return `⏹️ 蔓延失败：游戏已结束\n当前游戏已通关，无法继续操作。请开始新游戏或重置关卡。`;
+        return `⏹️ 游戏已结束\n\n当前游戏已通关，无法继续蔓延操作。\n你可以点击"下一关"继续挑战，或"重置关卡"重新尝试。`;
       case ExtendFailureReason.INVALID_COORD:
-        return `❌ 蔓延失败：坐标无效\n坐标 (q:${coord.q}, r:${coord.r}) 不合法，请选择有效的六边形格子。`;
+        return `❌ 坐标无效\n\n坐标 (q: ${coord.q}, r: ${coord.r}) 不是有效的六边形格子。\n请在地图范围内点击有效的六边形格子。`;
       default:
         return '❌ 蔓延失败：未知原因';
     }
@@ -324,7 +325,6 @@ export class FungiGame {
 
     const key = coordKey(coord);
     const cell = this.gameState.cells[key];
-    if (!cell) return;
 
     this.setProcessing(true);
 
@@ -336,7 +336,7 @@ export class FungiGame {
 
       if (this.gameState.status === 'won') {
         this.showMessage('🎊 恭喜！成功连接所有营养源！', 'success');
-      } else if (cell.type === HexType.NUTRIENT && cell.nutrientId && this.gameState.connectedNutrients.includes(cell.nutrientId)) {
+      } else if (cell?.type === HexType.NUTRIENT && cell.nutrientId && this.gameState.connectedNutrients.includes(cell.nutrientId)) {
         this.showMessage('✅ 成功连接一个营养源！', 'success');
       }
 
@@ -446,10 +446,11 @@ export class FungiGame {
     this.renderPanel();
 
     if (!(type === 'success' && this.gameState?.status === 'won')) {
+      const displayTime = type === 'error' ? 8000 : 3000;
       this.messageTimeout = setTimeout(() => {
         this.message = null;
         this.renderPanel();
-      }, 3000);
+      }, displayTime);
     }
   }
 

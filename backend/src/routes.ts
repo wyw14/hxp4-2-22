@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CreateGameRequest, ExtendMyceliumRequest, ApiResponse, HexCoord } from './types';
+import { CreateGameRequest, ExtendMyceliumRequest, ApiResponse, HexCoord, GameState } from './types';
 import { createNewGame, extendMycelium, undoLastMove, findAutoPath } from './gameLogic';
 import { saveGame, loadGame, deleteGame, listGames } from './db';
 import { coordKey } from './hexUtils';
@@ -29,16 +29,17 @@ router.post('/games', (req, res) => {
 router.get('/games', (req, res) => {
   try {
     const games = listGames();
-    const response: ApiResponse<typeof games> = {
+    const gameListData = games.map((g) => ({
+      id: g.id,
+      level: g.level,
+      status: g.status,
+      steps: g.steps,
+      optimalSteps: g.optimalSteps,
+      updatedAt: g.updatedAt,
+    }));
+    const response: ApiResponse<typeof gameListData> = {
       success: true,
-      data: games.map((g) => ({
-        id: g.id,
-        level: g.level,
-        status: g.status,
-        steps: g.steps,
-        optimalSteps: g.optimalSteps,
-        updatedAt: g.updatedAt,
-      })),
+      data: gameListData,
     };
     res.json(response);
   } catch (error) {
@@ -85,7 +86,7 @@ router.post('/games/:id/extend', (req, res) => {
     const result = extendMycelium(game, coord);
     saveGame(result.game);
 
-    const response: ApiResponse = {
+    const response: ApiResponse<GameState> = {
       success: result.success,
       data: result.game,
       error: result.success ? undefined : result.message,
@@ -112,7 +113,7 @@ router.post('/games/:id/undo', (req, res) => {
     const result = undoLastMove(game);
     saveGame(result.game);
 
-    const response: ApiResponse = {
+    const response: ApiResponse<GameState> = {
       success: result.success,
       data: result.game,
       error: result.success ? undefined : result.message,
@@ -138,7 +139,7 @@ router.post('/games/:id/reset', (req, res) => {
     const newGame = createNewGame(game.level, game.gridRadius);
     saveGame({ ...newGame, id: game.id, createdAt: game.createdAt });
 
-    const response: ApiResponse = { success: true, data: { ...newGame, id: game.id } };
+    const response: ApiResponse<GameState> = { success: true, data: { ...newGame, id: game.id } };
     res.json(response);
   } catch (error) {
     const response: ApiResponse = {
@@ -181,7 +182,7 @@ router.post('/games/:id/find-path', (req, res) => {
     }
 
     const path = findAutoPath(game, from, to);
-    const response: ApiResponse = {
+    const response: ApiResponse<HexCoord[]> = {
       success: path !== null,
       data: path || undefined,
       error: path === null ? '找不到可行路径' : undefined,

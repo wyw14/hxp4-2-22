@@ -145,15 +145,15 @@ export function extendMycelium(game: GameState, coord: HexCoord): ExtendResult {
     return { game, success: false, message: '游戏已结束', failureReason: ExtendFailureReason.GAME_ENDED };
   }
 
+  if (!isInRadius(coord, game.gridRadius)) {
+    return { game, success: false, message: '超出地图范围', failureReason: ExtendFailureReason.OUT_OF_BOUNDS };
+  }
+
   const key = coordKey(coord);
   const cell = game.cells[key];
 
   if (!cell) {
     return { game, success: false, message: '坐标无效', failureReason: ExtendFailureReason.INVALID_COORD };
-  }
-
-  if (!isInRadius(coord, game.gridRadius)) {
-    return { game, success: false, message: '超出地图范围', failureReason: ExtendFailureReason.OUT_OF_BOUNDS };
   }
 
   if (cell.type === HexType.POLLUTED) {
